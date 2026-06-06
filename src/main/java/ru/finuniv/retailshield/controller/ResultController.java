@@ -10,10 +10,10 @@ import ru.finuniv.retailshield.dto.ContactForm;
 import ru.finuniv.retailshield.dto.SessionAssessment;
 import ru.finuniv.retailshield.model.AssessmentResult;
 import ru.finuniv.retailshield.service.AssessmentService;
-import ru.finuniv.retailshield.service.EmailReportService;
 import ru.finuniv.retailshield.model.Section;
 import java.util.ArrayList;
 import java.util.List;
+import ru.finuniv.retailshield.service.TelegramReportService;
 
 /**
  * Финальный экран мастера. Запускает оценку через AssessmentService и
@@ -29,15 +29,15 @@ public class ResultController {
 
     private final AssessmentService assessmentService;
     private final SessionAssessment session;
-    private final EmailReportService emailReportService;
+    private final TelegramReportService telegramReportService;
 
     @Autowired
     public ResultController(AssessmentService assessmentService,
                             SessionAssessment session,
-                            EmailReportService emailReportService) {
+                            TelegramReportService telegramReportService) {
         this.assessmentService = assessmentService;
         this.session = session;
-        this.emailReportService = emailReportService;
+        this.telegramReportService = telegramReportService;
     }
 
     @GetMapping("/result")
@@ -64,7 +64,7 @@ public class ResultController {
             if (session.getRetailSection() != null) {
                 allSections.add(session.getRetailSection());
             }
-            emailReportService.sendReport(r, allSections);
+            telegramReportService.sendReport(r, allSections);
         }
 
         AssessmentResult result = session.getResult();

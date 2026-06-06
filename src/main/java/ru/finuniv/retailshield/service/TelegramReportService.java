@@ -1,12 +1,16 @@
 package ru.finuniv.retailshield.service;
 
-import jakarta.mail.internet.MimeMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import ru.finuniv.retailshield.model.AnswerOption;
 import ru.finuniv.retailshield.model.AssessmentResult;
 import ru.finuniv.retailshield.model.Question;
@@ -22,38 +26,38 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Сервис автоматической отправки отчётов команде разработчиков по email.
+ * Сервис автоматической отправки отчётов команде разработчиков через Telegram-бот.
  *
- * После прохождения клиентом анкеты ResultController вызывает этот сервис,
- * который собирает HTML-отчёт со всеми расчётами и ответами и отправляет
- * его на адрес, указанный в переменной окружения MAIL_TO.
+ * После прохождения клиентом анкеты ResultController вызывает этот сервис.
+ * Сервис строит:
+ *   1. Короткое текстовое сообщение со сводкой по клиенту.
+ *   2. Полный HTML-отчёт со всеми ответами и расчётами (прикрепляется как файл).
  *
- * Параметры подключения и адрес получателя берутся из переменных
- * окружения через application.properties (никогда не хранятся в коде).
+ * Отправка идёт через HTTP-запросы к Telegram Bot API.
+ * Никаких SMTP, паролей и почтовых ящиков — простой HTTPS, который работает
+ * с любого хостинга.
  *
- * Если отправка отключена (retailshield.report.enabled=false) или
- * параметры пусты — сервис молча игнорирует вызов, чтобы локальная
- * разработка без настроенного SMTP не падала.
+ * Параметры (токен бота, ID чата) берутся из переменных окружения
+ * через application.properties.
  */
 @Service
-public class EmailReportService {
+public class TelegramReportService {
 
-    private final JavaMailSender mailSender;
-    private final String recipient;
-    private final String senderUsername;
+    private final String botToken;
+    private final String chatId;
     private final boolean enabled;
+
+    private final RestTemplate http = new RestTemplate();
 
     private final DecimalFormat money;
     private final DecimalFormat score;
 
-    @Autowired
-    public EmailReportService(JavaMailSender mailSender,
-                              @Value("${retailshield.report.recipient:}") String recipient,
-                              @Value("${spring.mail.username:}") String senderUsername,
-                              @Value("${retailshield.report.enabled:true}") boolean enabled) {
-        this.mailSender = mailSender;
-        this.recipient = recipient;
-        this.senderUsername = senderUsername;
+    public TelegramReportService(
+            @Value("${retailshield.telegram.token:}") String botToken,
+            @Value("${retailshield.telegram.chat-id:}") String chatId,
+            @Value("${retailshield.telegram.enabled:true}") boolean enabled) {
+        this.botToken = botToken;
+        this.chatId = chatId;
         this.enabled = enabled;
 
         DecimalFormatSymbols ru = new DecimalFormatSymbols(new Locale("ru", "RU"));
@@ -64,102 +68,122 @@ public class EmailReportService {
     }
 
     /**
-     * Отправляет отчёт об оценке клиенту-разработчику. Вызывается из
-     * ResultController после успешного расчёта результатов.
+     * Отправляет отчёт. Сначала текстовое сводное сообщение, затем
+     * прикрепляет полный HTML-файл.
      *
-     * Не бросает исключений: если отправка не удалась, ошибка логируется
-     * в консоль, но пользователю результаты показываются как обычно.
+     * Не бросает исключений: если отправка не удалась, ошибка пишется
+     * в консоль, но клиент видит свои результаты как обычно.
      */
     public void sendReport(AssessmentResult result, List<Section> allSections) {
-        if (!enabled || recipient == null || recipient.isBlank()
-                || senderUsername == null || senderUsername.isBlank()) {
-            System.out.println("[EmailReportService] Отправка отключена или не настроена. Пропуск.");
+        if (!enabled || botToken == null || botToken.isBlank()
+                || chatId == null || chatId.isBlank()) {
+            System.out.println("[TelegramReportService] Отправка отключена или не настроена. Пропуск.");
             return;
         }
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            // 1. Текстовое сообщение со сводкой
+            String summary = buildSummary(result);
+            sendMessage(summary);
 
+            // 2. Файл с полным отчётом
             String companyName = result.getCompany().getName() == null
                     ? "Неизвестный клиент" : result.getCompany().getName();
-            String subject = "Отчёт по оценке: " + companyName
-                    + " (" + result.getRiskClass().getLabel() + ")";
+            String fileName = "Отчёт_" + sanitizeFileName(companyName) + ".html";
+            String fullReport = buildFullHtmlReport(result, allSections);
+            sendDocument(fileName, fullReport.getBytes(StandardCharsets.UTF_8));
 
-            helper.setFrom(senderUsername);
-            helper.setTo(recipient);
-            helper.setSubject(subject);
-            helper.setText(buildEmailBody(result), true);
-
-            // Прикладываем полный отчёт как HTML-файл
-            byte[] reportBytes = buildFullHtmlReport(result, allSections)
-                    .getBytes(StandardCharsets.UTF_8);
-            String attachmentName = "Отчёт_" + sanitizeFileName(companyName) + ".html";
-            helper.addAttachment(attachmentName,
-                    new ByteArrayResource(reportBytes), "text/html; charset=UTF-8");
-
-            mailSender.send(message);
-            System.out.println("[EmailReportService] Отчёт отправлен на " + recipient);
+            System.out.println("[TelegramReportService] Отчёт отправлен в чат " + chatId);
         } catch (Exception ex) {
-            System.err.println("[EmailReportService] Ошибка отправки: " + ex.getMessage());
+            System.err.println("[TelegramReportService] Ошибка отправки: " + ex.getMessage());
             ex.printStackTrace();
         }
     }
 
-    /** Короткое сводное письмо с ключевыми числами и приложенным полным отчётом. */
-    private String buildEmailBody(AssessmentResult r) {
+    /** Отправляет текстовое сообщение через метод sendMessage Telegram API. */
+    private void sendMessage(String text) {
+        String url = UriComponentsBuilder
+                .fromUriString("https://api.telegram.org/bot" + botToken + "/sendMessage")
+                .build().toUriString();
+
+        MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+        form.add("chat_id", chatId);
+        form.add("text", text);
+        form.add("parse_mode", "HTML");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, Object>> req = new HttpEntity<>(form, headers);
+
+        http.postForObject(url, req, String.class);
+    }
+
+    /** Отправляет файл через метод sendDocument Telegram API (multipart upload). */
+    private void sendDocument(String fileName, byte[] content) {
+        String url = "https://api.telegram.org/bot" + botToken + "/sendDocument";
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("chat_id", chatId);
+        builder.part("caption", "Полный отчёт по клиенту");
+        builder.part("document", new ByteArrayResource(content) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        }).contentType(MediaType.TEXT_HTML);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        HttpEntity<MultiValueMap<String, HttpEntity<?>>> req =
+                new HttpEntity<>(builder.build(), headers);
+
+        http.postForObject(url, req, String.class);
+    }
+
+    /** Короткое сообщение со сводкой по клиенту (Telegram HTML-разметка). */
+    private String buildSummary(AssessmentResult r) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<h2>Новая оценка клиента</h2>");
-        sb.append("<p><b>Дата:</b> ")
-                .append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
-                .append("</p>");
+        sb.append("<b>Новая оценка клиента</b>\n");
+        sb.append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
+                .append("\n\n");
 
-        sb.append("<h3>Сведения о клиенте</h3><ul>");
-        sb.append("<li>Компания: ").append(esc(r.getCompany().getName())).append("</li>");
-        sb.append("<li>Отрасль: ").append(esc(r.getCompany().getIndustry().getLabel())).append("</li>");
-        sb.append("<li>Годовая выручка: ").append(money.format(r.getCompany().getAnnualRevenueRub())).append(" ₽</li>");
-        sb.append("<li>Размер: ").append(esc(r.getCompany().getSizeLabel())).append("</li>");
-        sb.append("<li>Пакет: ").append(esc(r.getCompany().getPackageType().getLabel())).append("</li>");
-        sb.append("<li>Страховая сумма: ").append(money.format(r.getCompany().getInsuredSum())).append(" ₽</li>");
-        sb.append("</ul>");
+        sb.append("<b>Компания:</b> ").append(esc(r.getCompany().getName())).append("\n");
+        sb.append("<b>Отрасль:</b> ").append(esc(r.getCompany().getIndustry().getLabel())).append("\n");
+        sb.append("<b>Выручка:</b> ").append(money.format(r.getCompany().getAnnualRevenueRub())).append(" ₽\n");
+        sb.append("<b>Размер:</b> ").append(esc(r.getCompany().getSizeLabel())).append("\n");
+        sb.append("<b>Пакет:</b> ").append(esc(r.getCompany().getPackageType().getLabel())).append("\n");
+        sb.append("<b>Страховая сумма:</b> ").append(money.format(r.getCompany().getInsuredSum())).append(" ₽\n\n");
 
-        sb.append("<h3>Результаты</h3><ul>");
-        sb.append("<li>Класс риска: <b>").append(esc(r.getRiskClass().getLabel())).append("</b></li>");
-        sb.append("<li>Итоговый риск-скор: ").append(score.format(r.getScoreTotal())).append(" / 10</li>");
-        sb.append("<li>Индекс киберстрахуемости: ").append(score.format(r.getCii())).append(" / 10</li>");
+        sb.append("<b>Класс риска:</b> ").append(esc(r.getRiskClass().getLabel())).append("\n");
+        sb.append("<b>Риск-скор:</b> ").append(score.format(r.getScoreTotal())).append(" / 10\n");
+        sb.append("<b>Индекс киберстрахуемости:</b> ").append(score.format(r.getCii())).append(" / 10\n");
+
         if (r.getRiskClass().isAcceptable()) {
-            sb.append("<li>Годовая премия: <b>").append(money.format(r.getAnnualPremium())).append(" ₽</b></li>");
-            sb.append("<li>Loss Ratio: ").append(score.format(r.getLossRatio())).append("</li>");
+            sb.append("<b>Годовая премия:</b> ").append(money.format(r.getAnnualPremium())).append(" ₽\n");
+            sb.append("<b>Loss Ratio:</b> ").append(score.format(r.getLossRatio())).append("\n");
         } else {
-            sb.append("<li><b>Отказ в стандартных условиях</b></li>");
+            sb.append("<b>⚠ Отказ в стандартных условиях</b>\n");
             if (r.isStopFactorTriggered()) {
-                sb.append("<li>Причина: ").append(esc(r.getStopFactorReason())).append("</li>");
+                sb.append("Причина: ").append(esc(r.getStopFactorReason())).append("\n");
             }
         }
-        sb.append("</ul>");
 
-        sb.append("<p>Полный отчёт со всеми ответами клиента, "
-                + "сценарным анализом и разбивкой по разделам приложен к этому письму.</p>");
-
-        sb.append("<hr><p style='color:#777;font-size:12px;'>"
-                + "Автоматическое уведомление от прототипа «Ритейл.Щит Актив». "
-                + "Команда КиберКаска, Финансовый университет, 2026.</p>");
+        sb.append("\nПолный отчёт в прикреплённом файле.");
         return sb.toString();
     }
 
-    /** Полный HTML-отчёт (та же логика, что в ReportController.writeReport). */
+    /** Полный HTML-отчёт. */
     private String buildFullHtmlReport(AssessmentResult r, List<Section> allSections) {
         StringBuilder w = new StringBuilder();
         w.append("<!DOCTYPE html><html lang=\"ru\"><head><meta charset=\"UTF-8\">");
         w.append("<title>Отчёт по оценке: ").append(esc(r.getCompany().getName())).append("</title>");
         w.append(styles()).append("</head><body><main>");
 
-        // Шапка
         String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
         w.append("<h1>Отчёт по оценке киберрисков</h1>");
         w.append("<div class=\"meta\">Компания: ").append(esc(r.getCompany().getName()))
                 .append(" &middot; Пакет: ").append(esc(r.getCompany().getPackageType().getLabel()))
-                .append(" &middot; Дата формирования: ").append(now).append("</div>");
+                .append(" &middot; Дата: ").append(now).append("</div>");
 
         // Класс риска
         w.append("<section class=\"card\"><h2>Класс риска и скор</h2>");
