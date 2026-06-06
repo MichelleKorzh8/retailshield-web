@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -122,22 +121,31 @@ public class TelegramReportService {
     private void sendDocument(String fileName, byte[] content) {
         String url = "https://api.telegram.org/bot" + botToken + "/sendDocument";
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("chat_id", chatId);
-        builder.part("caption", "Полный отчёт по клиенту");
-        builder.part("document", new ByteArrayResource(content) {
+        // Создаём ресурс с правильным именем файла
+        ByteArrayResource fileResource = new ByteArrayResource(content) {
             @Override
             public String getFilename() {
                 return fileName;
             }
-        }).contentType(MediaType.TEXT_HTML);
+        };
+
+        // Собираем multipart-форму вручную через LinkedMultiValueMap
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("chat_id", chatId);
+        body.add("caption", "Полный отчёт по клиенту");
+        body.add("document", fileResource);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        HttpEntity<MultiValueMap<String, HttpEntity<?>>> req =
-                new HttpEntity<>(builder.build(), headers);
 
-        http.postForObject(url, req, String.class);
+        HttpEntity<MultiValueMap<String, Object>> req = new HttpEntity<>(body, headers);
+
+        String response = http.postForObject(url, req, String.class);
+
+        // Логируем ответ Telegram для отладки
+        if (response != null && !response.contains("\"ok\":true")) {
+            System.err.println("[TelegramReportService] Ответ Telegram при sendDocument: " + response);
+        }
     }
 
     /** Короткое сообщение со сводкой по клиенту (Telegram HTML-разметка). */
