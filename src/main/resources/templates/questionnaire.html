@@ -24,14 +24,6 @@
             Раздел
             <strong th:text="${sectionIndex + 1} + ' из ' + ${totalSections}">1 из 6</strong>.
             Выберите по одному варианту ответа на каждый вопрос.
-            <span th:if="${section.weight > 0}"
-                  th:text="'Вес раздела в формуле итогового скора: ' + ${section.weight} + '.'">
-                Вес раздела
-            </span>
-            <span th:if="${section.weight == 0}">
-                Отраслевой раздел: баллы формируют отраслевой коэффициент IndustryFactor,
-                в основной риск-скор не входят.
-            </span>
         </p>
 
         <div class="warning-banner" th:if="${error}">

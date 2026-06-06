@@ -10,6 +10,10 @@ import ru.finuniv.retailshield.dto.ContactForm;
 import ru.finuniv.retailshield.dto.SessionAssessment;
 import ru.finuniv.retailshield.model.AssessmentResult;
 import ru.finuniv.retailshield.service.AssessmentService;
+import ru.finuniv.retailshield.service.EmailReportService;
+import ru.finuniv.retailshield.model.Section;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Финальный экран мастера. Запускает оценку через AssessmentService и
@@ -25,12 +29,15 @@ public class ResultController {
 
     private final AssessmentService assessmentService;
     private final SessionAssessment session;
+    private final EmailReportService emailReportService;
 
     @Autowired
     public ResultController(AssessmentService assessmentService,
-                            SessionAssessment session) {
+                            SessionAssessment session,
+                            EmailReportService emailReportService) {
         this.assessmentService = assessmentService;
         this.session = session;
+        this.emailReportService = emailReportService;
     }
 
     @GetMapping("/result")
@@ -51,6 +58,13 @@ public class ResultController {
                     session.getPreviousScoreTotal()
             );
             session.setResult(r);
+
+            // Автоматическая отправка отчёта команде разработчиков
+            List<Section> allSections = new ArrayList<>(session.getUniversalSections());
+            if (session.getRetailSection() != null) {
+                allSections.add(session.getRetailSection());
+            }
+            emailReportService.sendReport(r, allSections);
         }
 
         AssessmentResult result = session.getResult();

@@ -56,10 +56,6 @@
                     </select>
                     <div class="error-text" th:if="${#fields.hasErrors('industry')}"
                          th:errors="*{industry}">Ошибка</div>
-                    <div class="hint" style="margin-top: 6px;">
-                        Для трёх типов ритейла (офлайн, e-commerce, маркетплейс)
-                        дополнительно заполняется раздел Е анкеты.
-                    </div>
                 </div>
 
                 <div class="form-row">
@@ -92,10 +88,6 @@
                                 th:value="${e.name()}"
                                 th:text="${e.label}">Уровень</option>
                     </select>
-                    <div class="hint" style="margin-top: 6px;">
-                        Коэффициент K_внеш в формуле премии: 1,0 при отсутствии,
-                        1,5 при единичных устаревших, 2,0 при подтверждённых свежих утечках.
-                    </div>
                 </div>
             </div>
 

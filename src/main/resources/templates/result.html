@@ -34,16 +34,11 @@
             </div>
 
             <div class="result-row">
-                <span class="result-row__label">Итоговый Score_total (с K_неопр)</span>
+                <span class="result-row__label">Итоговый базовый риск-скор</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(result.scoreTotal, 1, 2)} + ' / 10'">
                     0,00 / 10
                 </span>
-            </div>
-            <div class="result-row" th:if="${result.kUncertainty > 1.0}">
-                <span class="result-row__label">Коэффициент неопределённости K_неопр</span>
-                <span class="result-row__value"
-                      th:text="${#numbers.formatDecimal(result.kUncertainty, 1, 2)}">1,00</span>
             </div>
 
             <p class="hint" style="margin-top: 12px;"
@@ -101,14 +96,10 @@
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(entry.value, 1, 2)}">0</span>
             </div>
-            <p class="hint" style="margin-top: 10px;">
-                Формула: Score_total = 0,10·S_А + 0,30·S_Б + 0,15·S_В + 0,20·S_Г + 0,25·S_Д,
-                затем домножается на K_неопр и обрезается по 10.
-            </p>
         </div>
 
         <!-- === ПРАВИЛА СОГЛАСОВАННОСТИ === -->
-        <div class="card" th:if="${!result.consistencyWarnings.empty}">
+        <div class="card" th:if="${result.consistencyWarnings != null and !#lists.isEmpty(result.consistencyWarnings)}">
             <h2>Правила согласованности (таблица А.26)</h2>
             <p class="hint">Сработавшие правила при проверке логической связности ответов:</p>
             <ul style="margin: 8px 0 0 18px; font-size: 13px;">
@@ -118,39 +109,39 @@
 
         <!-- === FAIR === -->
         <div class="card">
-            <h2>FAIR: количественная оценка ущерба</h2>
+            <h2>Количественная оценка ущерба</h2>
             <div class="result-row">
-                <span class="result-row__label">TEF (частота угрозы для отрасли)</span>
+                <span class="result-row__label">Частота угрозы для отрасли</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(result.tef, 1, 2)}">0</span>
             </div>
             <div class="result-row">
-                <span class="result-row__label">V (уязвимость = Score_total / 10)</span>
+                <span class="result-row__label">Уязвимость</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(result.vulnerability, 1, 2)}">0</span>
             </div>
             <div class="result-row">
-                <span class="result-row__label">LEF (ожидаемая частота потерь)</span>
+                <span class="result-row__label">Ожидаемая частота потерь</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(result.lef, 1, 3)}">0</span>
             </div>
             <div class="result-row">
-                <span class="result-row__label">LM (величина потерь)</span>
+                <span class="result-row__label">Величина потерь</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatInteger(result.lossMagnitude, 3, 'WHITESPACE')} + ' ₽'">0 ₽</span>
             </div>
             <div class="result-row">
-                <span class="result-row__label">ALE (ожидаемый годовой убыток)</span>
+                <span class="result-row__label">Ожидаемый годовой убыток</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatInteger(result.ale, 3, 'WHITESPACE')} + ' ₽'">0 ₽</span>
             </div>
             <div class="result-row" th:if="${result.cascadeFactor > 1.0}">
-                <span class="result-row__label">CascadeFactor (правка 10.3)</span>
+                <span class="result-row__label">Коэффициент каскадного эффекта</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatDecimal(result.cascadeFactor, 1, 2)}">1,00</span>
             </div>
             <div class="result-row" th:if="${result.cascadeFactor > 1.0}">
-                <span class="result-row__label">ALE_cascade = ALE × CascadeFactor</span>
+                <span class="result-row__label">Скорректированный годовой убыток</span>
                 <span class="result-row__value"
                       th:text="${#numbers.formatInteger(result.aleCascade, 3, 'WHITESPACE')} + ' ₽'">0 ₽</span>
             </div>
@@ -158,7 +149,7 @@
 
         <!-- === BI === -->
         <div class="card">
-            <h2>Убыток от перерыва деятельности (BI)</h2>
+            <h2>Убыток от перерыва деятельности</h2>
             <div class="result-row">
                 <span class="result-row__label">BI (расчётный годовой)</span>
                 <span class="result-row__value"
@@ -167,9 +158,6 @@
             <p class="hint" th:if="${result.biUsedIndustryEstimate}">
                 Использован отраслевой ориентир: клиент не предоставил собственные показатели
                 восстановления, поэтому применены типовые значения по сегменту.
-            </p>
-            <p class="hint">
-                Формула: BI = (M_день + FC_день) × T_простоя × k_охвата (Блок 3, п. 3.1).
             </p>
         </div>
 
@@ -186,54 +174,67 @@
 
             <div th:if="${result.riskClass.acceptable}">
                 <div class="result-row">
-                    <span class="result-row__label">Страховая сумма S</span>
+                    <span class="result-row__label">Страховая сумма</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatInteger(result.company.insuredSum, 3, 'WHITESPACE')} + ' ₽'">0 ₽</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label">Базовая ставка T</span>
+                    <span class="result-row__label">Базовая ставка</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.baseRate * 100, 1, 1)} + '%'">0%</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label">K_отрасли</span>
+                    <span class="result-row__label">Отраслевой коэффициент</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.industryFactor, 1, 2)}">0</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label" th:text="'K_скора (' + ${result.riskClass.label} + ')'">K_скора</span>
+                    <span class="result-row__label" th:text="'Коэффициент класса риска (' + ${result.riskClass.label} + ')'">Коэффициент класса риска</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.kScore, 1, 2)}">0</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label" th:text="'K_размера (' + ${result.company.sizeLabel} + ')'">K_размера</span>
+                    <span class="result-row__label" th:text="'Коэффициент размера бизнеса (' + ${result.company.sizeLabel} + ')'">Коэффициент размера бизнеса</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.sizeFactor, 1, 2)}">0</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label">K_истории</span>
+                    <span class="result-row__label">Коэффициент истории убытков</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.kHistory, 1, 2)}">0</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label">K_сервиса</span>
+                    <span class="result-row__label">Сервисный коэффициент</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.kService, 1, 2)}">0</span>
                 </div>
+                <div class="hint" style="padding-left: 12px; margin-bottom: 6px;">
+                    <span th:if="${result.company.continuousMonitoring}">
+                        Непрерывный мониторинг.
+                    </span>
+                    <span th:if="${result.company.complianceAudit}">
+                        Комплаенс-аудит.
+                    </span>
+                    <span th:if="${result.company.phishingTraining}">
+                        Обучение и фишинг-тесты.
+                    </span>
+                    <span th:if="${result.company.hotline24x7}">
+                        Горячая линия 24/7.
+                    </span>
+                    <span th:if="${result.company.tabletopExercises}">
+                        Tabletop exercises.
+                    </span>
+                </div>
                 <div class="result-row">
-                    <span class="result-row__label">K_внеш (OSINT)</span>
+                    <span class="result-row__label">Коэффициент внешней экспозиции</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.kExposure, 1, 2)}">0</span>
                 </div>
                 <div class="result-row">
-                    <span class="result-row__label">K_аудита</span>
+                    <span class="result-row__label">Коэффициент независимого аудита</span>
                     <span class="result-row__value"
                           th:text="${#numbers.formatDecimal(result.kAudit, 1, 2)}">0</span>
                 </div>
-
-                <p class="hint" style="margin-top: 10px;">
-                    P = S × T × K_отрасли × K_скора × K_размера × K_истории × K_сервиса × K_внеш × K_аудита
-                </p>
 
                 <div class="risk-class" style="margin-top: 14px;"
                      th:text="'Годовая премия: ' + ${#numbers.formatInteger(result.annualPremium, 3, 'WHITESPACE')} + ' ₽'">
@@ -253,12 +254,8 @@
         </div>
 
         <!-- === СЦЕНАРНЫЙ АНАЛИЗ === -->
-        <div class="card" th:if="${!result.scenarios.empty}">
-            <h2>Сценарный анализ (карта рисков ритейла)</h2>
-            <p class="hint">
-                Риск-скор пересчитан для каждого сценария по специфическим весам разделов
-                из Блока 1, раздел 9. ALE — сумма по угрозам отрасли, привязанным к сценарию.
-            </p>
+        <div class="card" th:if="${result.scenarios != null and !#maps.isEmpty(result.scenarios)}">
+            <h2>Сценарный анализ</h2>
 
             <div th:each="entry : ${result.scenarios}"
                  style="margin: 14px 0; padding: 12px; background: #f7f7f5; border-radius: 4px;">
@@ -311,9 +308,8 @@
             </form>
         </div>
 
-        <div class="btn-row btn-row--between" style="margin-top: 24px;">
+        <div class="btn-row" style="margin-top: 24px;">
             <a class="btn" th:href="@{/reset}">Новая оценка</a>
-            <a class="btn" th:href="@{/report}">Скачать отчёт</a>
         </div>
 
     </div>
