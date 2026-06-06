@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Заявка отправлена</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <h1>Заявка отправлена</h1>
+
+        <div class="info-banner">
+            Спасибо! Менеджер свяжется с вами по телефону
+            <strong th:text="${contactForm.phone}">+7 ...</strong> в течение одного
+            рабочего дня для уточнения деталей и обсуждения индивидуальных условий.
+        </div>
+
+        <div class="btn-row">
+            <a class="btn btn--primary" th:href="@{/}">На главную</a>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Ритейл.Щит Актив — оценка киберрисков'">
+        Ритейл.Щит Актив
+    </title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <a th:href="@{/}" class="site-header__logo">Ритейл.Щит Актив</a>
+        <nav class="site-header__nav">
+            <a th:href="@{/}">Главная</a>
+            <a th:href="@{/packages}">Тарифы</a>
+            <a th:href="@{/dashboard}">Карта рисков</a>
+        </nav>
+    </div>
+</header>
+
+<main th:replace="${content}">
+    <!-- Сюда подставляется содержимое каждой конкретной страницы -->
+</main>
+
+<footer class="site-footer">
+    <div class="site-footer__inner">
+        Прототип конкурсной работы команды «КиберКаска», Финансовый университет, 2026.<br>
+        Методология оценки киберрисков и расчёта страховой премии.
+    </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title th:text="${pageTitle}">Ритейл.Щит Актив</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <h1>Ритейл.Щит Актив</h1>
+        <p class="subtitle">
+            Киберстрахование для розничной торговли, e-commerce и маркетплейсов.
+            Прозрачная методология оценки риска, гибкая тарифная сетка,
+            интеграция с системой защиты клиента.
+        </p>
+
+        <div class="card">
+            <h2>Что это</h2>
+            <p>
+                Продукт сочетает классическое страхование от киберинцидентов
+                с непрерывным сервисом управления риском. Премия рассчитывается
+                по прозрачной формуле на основе анкеты клиента, отраслевой карты
+                рисков и сценарного анализа: клиент видит, за что он платит,
+                и как может снизить премию, улучшая защиту.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Кому подходит</h2>
+            <p>
+                Средний сегмент ритейла и онлайн-коммерции с годовой выручкой
+                от 100 миллионов до 5 миллиардов рублей. Сетевая розничная
+                торговля, интернет-магазины, маркетплейсы. Отдельный пакет
+                Лайт — для бизнеса с доминирующим регуляторным риском
+                (юридическая защита при утечках ПДн).
+            </p>
+        </div>
+
+        <h2>Четыре тарифных пакета</h2>
+        <div class="package-grid">
+            <div class="package-card" th:each="entry : ${packages}">
+                <div class="package-card__title" th:text="${entry.value.type.label}">Базовый</div>
+                <div class="package-card__rate"
+                     th:text="'Базовая ставка ' + ${#numbers.formatDecimal(entry.value.type.baseRate * 100, 1, 1)} + '%'">
+                    Базовая ставка 1.2%
+                </div>
+                <div class="package-card__sum"
+                     th:text="'Страховая сумма: ' + ${entry.value.type.insuredSumRange}">
+                    Страховая сумма: до 30 млн ₽
+                </div>
+                <div class="package-card__description"
+                     th:text="${entry.value.type.description}">
+                    Описание пакета
+                </div>
+                <a class="btn btn--small package-card__select" th:href="@{/start}">
+                    Подробнее
+                </a>
+            </div>
+        </div>
+
+        <div class="info-banner">
+            <strong>Не знаете, какой тариф нужен?</strong><br>
+            Пройдите короткую анкету и узнайте, какой пакет подходит именно вам.
+            <div style="margin-top: 10px;">
+                <a class="btn btn--primary" th:href="@{/helper}">Подобрать тариф</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Как проходит оценка</h2>
+            <p>
+                Шаг 1. Выбор пакета или прохождение анкеты-помощника.<br>
+                Шаг 2. Чек-лист минимальных требований к страхователю.<br>
+                Шаг 3. Полная анкета по разделам А–Е.<br>
+                Шаг 4. Расчёт риск-скора, ожидаемого годового убытка и страховой премии.
+            </p>
+            <p>
+                Заполнение занимает около 25–30 минут. Все ответы хранятся
+                локально на стороне приложения и не передаются третьим лицам.
+            </p>
+            <div style="margin-top: 14px;">
+                <a class="btn btn--primary" th:href="@{/start}">Начать оценку</a>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>

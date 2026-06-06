@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title th:text="${pageTitle}">Анкета</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <div class="wizard-progress">
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+        </div>
+
+        <h1 th:text="'Раздел ' + ${section.code} + '. ' + ${section.title}">
+            Раздел А. Общие сведения
+        </h1>
+        <p class="subtitle">
+            Раздел
+            <strong th:text="${sectionIndex + 1} + ' из ' + ${totalSections}">1 из 6</strong>.
+            Выберите по одному варианту ответа на каждый вопрос.
+            <span th:if="${section.weight > 0}"
+                  th:text="'Вес раздела в формуле итогового скора: ' + ${section.weight} + '.'">
+                Вес раздела
+            </span>
+            <span th:if="${section.weight == 0}">
+                Отраслевой раздел: баллы формируют отраслевой коэффициент IndustryFactor,
+                в основной риск-скор не входят.
+            </span>
+        </p>
+
+        <div class="warning-banner" th:if="${error}">
+            <span th:text="${error}">Ошибка</span>
+        </div>
+
+        <form th:action="@{'/questionnaire/' + ${sectionIndex}}" method="post">
+
+            <div class="card">
+                <div class="question" th:each="q : ${section.questions}">
+
+                    <div class="question__header">
+                        <div class="question__id" th:text="${q.id}">А1</div>
+                        <div class="question__text" th:text="${q.text}">Текст вопроса</div>
+                        <span class="question__critical-mark" th:if="${q.critical}">критический</span>
+                    </div>
+
+                    <div class="question__options">
+                        <div class="radio-row" th:each="opt, iter : ${q.options}">
+                            <input type="radio"
+                                   th:id="${q.id + '_' + iter.index}"
+                                   th:name="${q.id}"
+                                   th:value="${iter.index}"
+                                   th:checked="${q.selectedIndex == iter.index}">
+                            <label th:for="${q.id + '_' + iter.index}">
+                                <span th:text="${opt.text}">Вариант ответа</span>
+                                <span class="hint" th:if="${opt.uncertain}">
+                                    (заявлено без подтверждения)
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row btn-row--between">
+                <a class="btn"
+                   th:if="${sectionIndex > 0}"
+                   th:href="@{'/questionnaire/' + ${sectionIndex - 1}}">Назад</a>
+                <a class="btn"
+                   th:if="${sectionIndex == 0}"
+                   th:href="@{/stop-factors}">Назад</a>
+
+                <button type="submit" class="btn btn--primary"
+                        th:text="${isLast} ? 'Получить результат' : 'Далее'">
+                    Далее
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</main>
+
+</body>
+</html>

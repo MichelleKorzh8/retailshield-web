@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Отказ в страховании в стандартных условиях</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <h1 class="risk-class risk-class--critical">Отказ в стандартных условиях</h1>
+        <p class="subtitle">
+            По результатам предварительного отбора компания
+            <strong th:text="${companyName}">компания</strong>
+            отнесена к классу риска Critical и не может быть застрахована в стандартных условиях.
+        </p>
+
+        <div class="card">
+            <h2>Причина отказа</h2>
+            <p>
+                <strong th:text="${violation.id} + ': ' + ${violation.text}">Пункт</strong>
+            </p>
+
+            <h3>Обоснование</h3>
+            <p th:text="${violation.rationale}">Обоснование критерия отказа</p>
+
+            <p class="hint">
+                После устранения указанного недостатка возможно повторное прохождение
+                оценки с индивидуальным рассмотрением условий договора.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Связаться с менеджером для индивидуального рассмотрения</h2>
+            <p>
+                Если ситуация требует обсуждения (например, недостаток находится в процессе
+                устранения), оставьте контакты — менеджер свяжется с вами и предложит
+                индивидуальные условия.
+            </p>
+
+            <form th:action="@{/refusal/contact}" method="post" th:object="${contactForm}">
+                <div class="form-row">
+                    <label for="contactName">Контактное лицо</label>
+                    <input type="text" id="contactName" th:field="*{name}"
+                           placeholder="Имя Фамилия">
+                </div>
+                <div class="form-row">
+                    <label for="contactPhone">Телефон</label>
+                    <input type="tel" id="contactPhone" th:field="*{phone}"
+                           placeholder="+7 (___) ___-__-__">
+                </div>
+                <div class="form-row">
+                    <label for="contactComment">Комментарий (опционально)</label>
+                    <textarea id="contactComment" th:field="*{comment}" rows="3"
+                              placeholder="Контекст ситуации, планируемое устранение и сроки"></textarea>
+                </div>
+
+                <div class="btn-row btn-row--between">
+                    <a class="btn" th:href="@{/}">На главную</a>
+                    <button type="submit" class="btn btn--primary">Отправить заявку</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>

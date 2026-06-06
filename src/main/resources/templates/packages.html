@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Выбор тарифного пакета</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container">
+
+        <h1>Выбор тарифного пакета</h1>
+        <p class="subtitle">
+            Сравните условия и выберите подходящий тариф. Каждый пакет рассчитан
+            на свой профиль клиента и содержит свой набор покрытий и сервисов.
+        </p>
+
+        <div class="info-banner" th:if="${param.recommended}">
+            <strong>По итогам анкеты-помощника</strong> рекомендуется
+            <span th:text="${param.recommended}">PACKAGE</span>.<br>
+            <span th:if="${param.rationale}" th:text="${param.rationale}">Обоснование.</span>
+        </div>
+
+        <div class="package-grid">
+            <div class="package-card" th:each="entry : ${packages}"
+                 th:with="info=${entry.value}">
+
+                <div class="package-card__title" th:text="${info.type.label}">Базовый</div>
+
+                <div class="package-card__rate"
+                     th:text="'Базовая ставка ' + ${#numbers.formatDecimal(info.type.baseRate * 100, 1, 1)} + '%'">
+                    Базовая ставка 1.2%
+                </div>
+
+                <div class="package-card__sum"
+                     th:text="'Страховая сумма: ' + ${info.type.insuredSumRange}">
+                    Страховая сумма: до 30 млн ₽
+                </div>
+
+                <p class="package-card__description"
+                   th:text="${info.targetAudience}">
+                    Целевая аудитория
+                </p>
+
+                <h3 style="font-size:14px; margin-top:10px;">Что покрывает</h3>
+                <ul style="margin: 4px 0 10px 18px; padding: 0; font-size: 13px;">
+                    <li th:each="item : ${info.coverageHighlights}" th:text="${item}">
+                        Покрытие
+                    </li>
+                </ul>
+
+                <h3 style="font-size:14px; margin-top:6px;">Сервисы</h3>
+                <ul style="margin: 4px 0 10px 18px; padding: 0; font-size: 13px;">
+                    <li th:each="item : ${info.includedServices}" th:text="${item}">
+                        Сервис
+                    </li>
+                </ul>
+
+                <h3 style="font-size:14px; margin-top:6px;">Минимальные требования</h3>
+                <ul style="margin: 4px 0 14px 18px; padding: 0; font-size: 12.5px; color: #555;">
+                    <li th:each="item : ${info.minimumRequirements}" th:text="${item}">
+                        Требование
+                    </li>
+                </ul>
+
+                <a class="btn btn--primary"
+                   th:href="@{'/packages/select/' + ${info.type.name()}}">
+                    Выбрать пакет
+                </a>
+            </div>
+        </div>
+
+        <div class="btn-row btn-row--between" style="margin-top: 30px;">
+            <a class="btn" th:href="@{/}">На главную</a>
+            <a class="btn" th:href="@{/helper}">Подобрать тариф через анкету</a>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>

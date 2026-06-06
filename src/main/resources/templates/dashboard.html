@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Карта отраслевых рисков</title>
+    <style>
+        .heatmap { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .heatmap th, .heatmap td {
+            border: 1px solid #fff; padding: 10px;
+            vertical-align: top; font-size: 12.5px; color: #1c1c1c;
+            min-height: 80px;
+        }
+        .heatmap th { background: #ececea; font-weight: 700; text-align: center; }
+        .heatmap th.row-h { text-align: left; width: 18%; }
+        .threat-tag {
+            background: rgba(255,255,255,0.85); color: #1c1c1c;
+            padding: 4px 6px; border-radius: 3px; margin: 3px 0;
+            font-size: 12px;
+        }
+        .chart-wrap {
+            display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap;
+        }
+        .legend { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .swatch {
+            width: 14px; height: 14px; display: inline-block;
+            border-radius: 2px; border: 1px solid #ccc;
+        }
+        .threat-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .threat-table th, .threat-table td {
+            border-bottom: 1px solid #e0e0de; padding: 8px 10px;
+            text-align: left; vertical-align: top; font-size: 13px;
+        }
+        .threat-table th { background: #f0f0ee; }
+        .desc { color: #666; font-size: 12px; margin-top: 3px; }
+    </style>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container">
+
+        <h1>Карта отраслевых киберрисков</h1>
+        <p class="subtitle">
+            <span th:text="${riskMap.industry}">Розничная торговля</span> &middot;
+            IndustryFactor =
+            <strong th:text="${riskMap.industryFactor}">1.25</strong> &middot;
+            Базовый TEF =
+            <strong th:text="${riskMap.tefBase}">0.21</strong>
+        </p>
+
+        <!-- === МАТРИЦА === -->
+        <div class="card">
+            <h2>Матрица «Частота × Ущерб»</h2>
+            <p class="hint">
+                Цвет ячейки отражает уровень критичности. Чем темнее — тем выше совокупный риск.
+            </p>
+
+            <table class="heatmap">
+                <tr>
+                    <th></th>
+                    <th th:each="d : ${matrix.damageLevels}" th:text="${d}">Ущерб</th>
+                </tr>
+                <tr th:each="f : ${matrix.frequencyLevels}">
+                    <th class="row-h" th:text="${f}">Частота</th>
+                    <td th:each="d : ${matrix.damageLevels}"
+                        th:with="cell=${matrix.cells.get(f + '|' + d)}"
+                        th:style="'background:' + ${cell.color}">
+                        <div class="threat-tag" th:each="t : ${cell.threats}">
+                            <span th:text="${t.code} + '. ' + ${t.name}">T1</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- === КРУГОВАЯ ДИАГРАММА ALE === -->
+        <div class="card">
+            <h2>Распределение ALE между угрозами</h2>
+            <p class="hint">
+                Средний ожидаемый годовой убыток по каждой угрозе (TEF × средний_ущерб),
+                без учёта индивидуальной защиты клиента.
+            </p>
+
+            <div class="chart-wrap">
+                <svg width="400" height="400" viewBox="0 0 400 400">
+                    <path th:each="slice : ${pie.slices}"
+                          th:d="${slice.pathD}"
+                          th:fill="${slice.color}"
+                          stroke="#fff" stroke-width="2"></path>
+                </svg>
+
+                <div class="legend">
+                    <div class="legend-item" th:each="slice : ${pie.slices}">
+                        <span class="swatch" th:style="'background:' + ${slice.color}"></span>
+                        <span>
+                            <span th:text="${slice.code} + '. ' + ${slice.name}">T1</span> —
+                            <strong th:text="${#numbers.formatDecimal(slice.sharePercent, 1, 1)} + '%'">0%</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === СТОЛБЧАТАЯ ДИАГРАММА === -->
+        <div class="card">
+            <h2>Нагрузка отраслевых угроз на группы факторов Блока 1</h2>
+            <p class="hint">
+                Каждая угроза влияет на одну или несколько групп факторов методологии.
+                Гистограмма показывает, на какие группы приходится наибольшее давление в ритейле.
+            </p>
+
+            <svg width="600" height="240" viewBox="0 0 600 240">
+                <g th:each="b, iter : ${bars.items}"
+                   th:with="xPos=${40 + iter.index * 110}">
+                    <rect th:x="${xPos}"
+                          th:y="${b.yPx}"
+                          width="80"
+                          th:height="${b.barHeightPx}"
+                          fill="#4a4744"></rect>
+                    <text th:x="${xPos + 40}"
+                          th:y="${b.yPx - 6}"
+                          text-anchor="middle"
+                          font-size="13"
+                          fill="#111"
+                          th:text="${b.count}">0</text>
+                    <text th:x="${xPos + 40}"
+                          y="218"
+                          text-anchor="middle"
+                          font-size="11"
+                          fill="#1c1c1c"
+                          th:text="${b.label}">Группа</text>
+                </g>
+                <line x1="30" y1="200" x2="580" y2="200"
+                      stroke="#888" stroke-width="1"></line>
+            </svg>
+        </div>
+
+        <!-- === ТАБЛИЦА УГРОЗ === -->
+        <div class="card">
+            <h2>Подробное описание угроз</h2>
+            <table class="threat-table">
+                <thead>
+                <tr>
+                    <th>Код</th>
+                    <th>Угроза</th>
+                    <th>Частота</th>
+                    <th>Диапазон ущерба</th>
+                    <th>Сценарий</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${riskMap.threats}">
+                    <td th:text="${t.code}">T1</td>
+                    <td>
+                        <strong th:text="${t.name}">Название</strong>
+                        <div class="desc" th:text="${t.description}">Описание</div>
+                    </td>
+                    <td>
+                        <span th:text="${t.frequencyCategory}">Высокая</span>
+                        <div class="desc" th:text="'TEF ' + ${t.tef}">TEF</div>
+                    </td>
+                    <td>
+                        <span th:text="${#numbers.formatInteger(t.lossMin, 3, 'WHITESPACE')} + ' – ' +
+                                       ${#numbers.formatInteger(t.lossMax, 3, 'WHITESPACE')} + ' ₽'">
+                            0 – 0 ₽
+                        </span>
+                    </td>
+                    <td th:text="${t.scenario}">SCENARIO</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="btn-row btn-row--between" style="margin-top: 20px;">
+            <a class="btn" th:href="@{/}">На главную</a>
+            <a class="btn" th:href="@{/result}">К результатам оценки</a>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title th:text="${pageTitle}">Анкета-помощник</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <h1>Подобрать тариф</h1>
+        <p class="subtitle">
+            Отметьте, какие риски вы хотите закрыть страхованием. На основе ваших
+            ответов мы порекомендуем подходящий тарифный пакет.
+        </p>
+
+        <form th:action="@{/helper}" method="post" th:object="${form}">
+
+            <div class="card">
+                <h2>Что вы хотите застраховать</h2>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="ownLosses" th:field="*{coverOwnLosses}">
+                    <label for="ownLosses">
+                        <strong>Собственные убытки компании</strong><br>
+                        <span class="hint">Восстановление данных, расходы на форензику,
+                            простой инфраструктуры</span>
+                    </label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="thirdParty" th:field="*{coverThirdParty}">
+                    <label for="thirdParty">
+                        <strong>Ответственность перед третьими лицами</strong><br>
+                        <span class="hint">Претензии клиентов, поставщиков, партнёров
+                            при утечках их данных</span>
+                    </label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="reputation" th:field="*{coverReputation}">
+                    <label for="reputation">
+                        <strong>Репутационные расходы и кризисные ситуации</strong><br>
+                        <span class="hint">PR-сопровождение, колл-центр для пострадавших,
+                            антикризисные коммуникации</span>
+                    </label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="regulatory" th:field="*{coverRegulatory}">
+                    <label for="regulatory">
+                        <strong>Юридическая защита и минимизация регуляторной
+                            ответственности</strong><br>
+                        <span class="hint">Защита при проверках Роскомнадзора, ФСТЭК;
+                            подготовка доказательств принятых мер</span>
+                    </label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="services" th:field="*{coverAdditionalServices}">
+                    <label for="services">
+                        <strong>Дополнительные ИБ-сервисы</strong><br>
+                        <span class="hint">Непрерывный мониторинг периметра, фишинг-тесты,
+                            tabletop exercises, кризисный SOC</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Размер бизнеса</h2>
+                <div class="form-row">
+                    <label for="revenue">Годовая выручка компании, ₽</label>
+                    <input type="number" id="revenue" th:field="*{annualRevenueRub}"
+                           placeholder="например, 800000000" min="0" step="1000000">
+                    <div class="hint" style="margin-top: 6px;">
+                        Нужно для отсечки по пакету Лайт (применяется при выручке до 1 млрд ₽).
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row btn-row--between">
+                <a class="btn" th:href="@{/}">Назад</a>
+                <button type="submit" class="btn btn--primary">Подобрать тариф</button>
+            </div>
+
+        </form>
+    </div>
+</main>
+
+</body>
+</html>

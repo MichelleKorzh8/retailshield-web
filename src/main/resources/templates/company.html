@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Данные компании</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <div class="wizard-progress">
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step"></div>
+            <div class="wizard-progress__step"></div>
+        </div>
+
+        <h1>Шаг 2. Данные компании</h1>
+        <p class="subtitle">
+            Выбран пакет <strong th:text="${packageLabel}">пакет</strong>.
+            Заполните основные сведения о компании для последующей оценки риска
+            и расчёта страховой премии.
+        </p>
+
+        <form th:action="@{/company}" method="post" th:object="${form}">
+            <input type="hidden" th:field="*{packageType}">
+
+            <div class="card">
+                <h2>Основная информация</h2>
+
+                <div class="form-row">
+                    <label for="name">Название компании</label>
+                    <input type="text" id="name" th:field="*{name}"
+                           placeholder="например, Региональный маркетплейс">
+                    <div class="error-text" th:if="${#fields.hasErrors('name')}"
+                         th:errors="*{name}">Ошибка</div>
+                </div>
+
+                <div class="form-row">
+                    <label for="revenue">Годовая выручка, ₽</label>
+                    <input type="number" id="revenue" th:field="*{annualRevenueRub}"
+                           placeholder="например, 800000000" min="1" step="1000000">
+                    <div class="error-text" th:if="${#fields.hasErrors('annualRevenueRub')}"
+                         th:errors="*{annualRevenueRub}">Ошибка</div>
+                </div>
+
+                <div class="form-row">
+                    <label for="industry">Отрасль</label>
+                    <select id="industry" th:field="*{industry}">
+                        <option value="" disabled>— выберите —</option>
+                        <option th:each="i : ${industries}"
+                                th:value="${i.name()}"
+                                th:text="${i.label}">Отрасль</option>
+                    </select>
+                    <div class="error-text" th:if="${#fields.hasErrors('industry')}"
+                         th:errors="*{industry}">Ошибка</div>
+                    <div class="hint" style="margin-top: 6px;">
+                        Для трёх типов ритейла (офлайн, e-commerce, маркетплейс)
+                        дополнительно заполняется раздел Е анкеты.
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label for="insuredSum">Желаемая страховая сумма, ₽</label>
+                    <input type="number" id="insuredSum" th:field="*{insuredSum}"
+                           placeholder="например, 30000000" min="1" step="1000000">
+                    <div class="error-text" th:if="${#fields.hasErrors('insuredSum')}"
+                         th:errors="*{insuredSum}">Ошибка</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>История инцидентов</h2>
+                <div class="form-row">
+                    <label for="lossHistory">Киберинциденты за последние 12 месяцев</label>
+                    <select id="lossHistory" th:field="*{lossHistory}">
+                        <option th:each="h : ${lossHistories}"
+                                th:value="${h.name()}"
+                                th:text="${h.label}">История</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Внешняя экспозиция (OSINT)</h2>
+                <div class="form-row">
+                    <label for="exposure">Результаты проверки утечек учётных данных</label>
+                    <select id="exposure" th:field="*{exposure}">
+                        <option th:each="e : ${exposures}"
+                                th:value="${e.name()}"
+                                th:text="${e.label}">Уровень</option>
+                    </select>
+                    <div class="hint" style="margin-top: 6px;">
+                        Коэффициент K_внеш в формуле премии: 1,0 при отсутствии,
+                        1,5 при единичных устаревших, 2,0 при подтверждённых свежих утечках.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Дополнительные параметры</h2>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="audit" th:field="*{hasExternalAudit}">
+                    <label for="audit">
+                        Имеется действующее заключение независимого внешнего аудита ИБ
+                        <div class="hint">K_аудита = 0,90 при наличии (скидка), 1,00 без него.
+                            Применяется ко всем тарифным пакетам.</div>
+                    </label>
+                </div>
+
+                <!-- Непрерывный мониторинг: активен для Базового, Стандарта, Премиума -->
+                <div class="checkbox-row"
+                     th:with="active=${form.packageType != null and form.packageType.name() != 'LIGHT'}">
+                    <input type="checkbox" id="monitoring"
+                           th:field="*{continuousMonitoring}"
+                           th:disabled="${!active}">
+                    <label for="monitoring" th:style="${!active} ? 'color:#9a9a9a;' : ''">
+                        Подключить непрерывный мониторинг внешнего периметра
+                        <div class="hint" th:if="${active}">
+                            K_сервиса = 0,85 (скидка 15%). Ежедневное сканирование портов,
+                            утечек учётных данных, состояния SSL-сертификатов.
+                        </div>
+                        <div class="hint" th:if="${!active}" style="color:#9a9a9a;">
+                            Недоступно для пакета Лайт. Доступно для пакетов Базовый,
+                            Стандарт, Премиум.
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Комплаенс-аудит: активен только для Лайта -->
+                <div class="checkbox-row"
+                     th:with="active=${form.packageType != null and form.packageType.name() == 'LIGHT'}">
+                    <input type="checkbox" id="compliance"
+                           th:field="*{complianceAudit}"
+                           th:disabled="${!active}">
+                    <label for="compliance" th:style="${!active} ? 'color:#9a9a9a;' : ''">
+                        Подключить ежегодный комплаенс-аудит обработки ПДн
+                        <div class="hint" th:if="${active}">
+                            K_сервиса = 0,90 для пакета Лайт (скидка 10%). Самостоятельная
+                            стоимость аудита — 100–250 тыс. ₽, премия окупается сервисной частью.
+                        </div>
+                        <div class="hint" th:if="${!active}" style="color:#9a9a9a;">
+                            Доступно только для пакета Лайт. Для остальных пакетов сервисная
+                            скидка применяется через непрерывный мониторинг.
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="btn-row btn-row--between">
+                <a class="btn" th:href="@{/packages}">Назад</a>
+                <button type="submit" class="btn btn--primary">К чек-листу</button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Чек-лист предварительного отбора</title>
+</head>
+<body>
+
+<main layout:fragment="content">
+    <div class="container container--narrow">
+
+        <div class="wizard-progress">
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step wizard-progress__step--active"></div>
+            <div class="wizard-progress__step"></div>
+        </div>
+
+        <h1>Шаг 3. Предварительный отбор</h1>
+        <p class="subtitle">
+            Отметьте, выполняется ли каждый из семи пунктов минимального уровня
+            кибергигиены. Несоблюдение любого пункта означает безусловный отказ
+            в страховании в стандартных условиях; в этом случае возможно
+            индивидуальное рассмотрение через менеджера.
+        </p>
+
+        <div class="warning-banner" th:if="${error}">
+            <span th:text="${error}">Ошибка</span>
+        </div>
+
+        <form th:action="@{/stop-factors}" method="post">
+
+            <div class="card">
+                <div class="question" th:each="sf : ${stopFactors}">
+                    <div class="question__header">
+                        <div class="question__id" th:text="${sf.id}">S1</div>
+                        <div class="question__text" th:text="${sf.text}">Текст пункта</div>
+                    </div>
+                    <div class="question__options">
+                        <div class="radio-row">
+                            <input type="radio" th:id="${sf.id + '_yes'}"
+                                   th:name="${sf.id}" value="yes">
+                            <label th:for="${sf.id + '_yes'}">Да, соблюдается</label>
+                        </div>
+                        <div class="radio-row">
+                            <input type="radio" th:id="${sf.id + '_no'}"
+                                   th:name="${sf.id}" value="no">
+                            <label th:for="${sf.id + '_no'}">Нет, не соблюдается</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row btn-row--between">
+                <a class="btn" th:href="@{/company}">Назад</a>
+                <button type="submit" class="btn btn--primary">Далее</button>
+            </div>
+
+        </form>
+
+    </div>
+</main>
+
+</body>
+</html>
